@@ -1,8 +1,2 @@
-#### Der Server steht nach dem Build unter sha.linkpc.net:3000
-
-
-aws configure --region
-eu-central-1
-
-aws deploy list-applications
-osb_deploy_app
+API:
+https://documenter.getpostman.com/view/543781/SzS7R6ux?version=latest

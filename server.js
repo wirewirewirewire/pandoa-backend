@@ -53,7 +53,7 @@ if (process.env.NODE_ENV !== "development") {
 }
 
 const MongoStore = require("connect-mongo")(session);
-mongoose.connect(configDB.url, { useNewUrlParser: true }); // connect to our database
+mongoose.connect(configDB.url, { useNewUrlParser: true, useUnifiedTopology: true }); // connect to our database
 mongoose.set("useCreateIndex", true);
 
 var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
