@@ -1,0 +1,23 @@
+{
+  "name": "pando-app",
+  "version": "0.0.1",
+  "scripts": {
+    "start": "nodemon server.js",
+    "start:local": "nodemon server.js",
+    "deploy": "aws deploy push --application-name osb_deploy_app --s3-location s3://osb-deploy-bucket/pando_v1.zip --ignore-hidden-files && aws deploy create-deployment --application-name osb_deploy_app --deployment-config-name CodeDeployDefault.OneAtATime --deployment-group-name DG1 --s3-location bucket=osb-deploy-bucket,bundleType=zip,key=pando_v1.zip"
+  },
+  "dependencies": {
+    "dotenv": "^8.0.0",
+    "express": "~4.17.1",
+    "body-parser": "latest",
+    "express-session": "~1.14.1",
+    "fs": "latest",
+    "mongoose": "~5.3.12",
+    "morgan": "~1.7.0"
+  },
+  "devDependencies": {
+    "connect-mongo": "^2.0.1",
+    "nodemon": "latest",
+    "console-stamp": "latest"
+  }
+}

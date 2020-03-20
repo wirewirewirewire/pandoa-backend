@@ -1,0 +1,70 @@
+image: node:10.15.3
+
+pipelines:
+  default:
+    - step:
+        name: Build Frontend
+        deployment: Production
+        caches:
+          - node
+        script:
+          - apt-get update
+          - apt-get install -y zip
+          - npm install
+          - zip -q -r application.zip .
+        artifacts:
+          - application.zip
+    - step:
+        name: AWS Deployment
+        script:
+          - pipe: atlassian/aws-code-deploy:0.5.0
+            variables:
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              APPLICATION_NAME: $APPLICATION_NAME
+              S3_BUCKET: $S3_BUCKET
+              COMMAND: "upload"
+              ZIP_FILE: "application.zip"
+              VERSION_LABEL: "pando-1"
+          - pipe: atlassian/aws-code-deploy:0.5.0
+            variables:
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              APPLICATION_NAME: $APPLICATION_NAME
+              DEPLOYMENT_GROUP: $DEPLOYMENT_GROUP
+              S3_BUCKET: $S3_BUCKET
+              COMMAND: "deploy"
+              WAIT: "false"
+              VERSION_LABEL: "pando-1"
+              IGNORE_APPLICATION_STOP_FAILURES: "true"
+              FILE_EXISTS_BEHAVIOR: "OVERWRITE"
+    - step:
+        trigger: manual
+        name: AWS Deployment Check
+        script:
+          - pipe: atlassian/aws-code-deploy:0.5.0
+            variables:
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              APPLICATION_NAME: $APPLICATION_NAME
+              S3_BUCKET: $S3_BUCKET
+              COMMAND: "upload"
+              ZIP_FILE: "application.zip"
+          - pipe: atlassian/aws-code-deploy:0.5.0
+            variables:
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              APPLICATION_NAME: $APPLICATION_NAME
+              DEPLOYMENT_GROUP: $DEPLOYMENT_GROUP
+              S3_BUCKET: $S3_BUCKET
+              COMMAND: "deploy"
+              WAIT: "true"
+              IGNORE_APPLICATION_STOP_FAILURES: "true"
+              FILE_EXISTS_BEHAVIOR: "OVERWRITE"
+#definitions:
+#  caches:
+#    yarncustom: /usr/local/share/.cache/yarn/v1
