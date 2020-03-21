@@ -9,7 +9,6 @@ var jsonParser = bodyParser.json({
 
 
 module.exports = function(app) {
-  // normal routes ===============================================================
   app.get("/api/v1/test", function(req, res) {
     console.log("[Router] Test Endpoint")
     var search = {};
@@ -28,14 +27,14 @@ module.exports = function(app) {
           _id : 0 ,
           lat : 1 ,
           lng : 1 ,
-          time : 1
+          time : 1,
+          speed: 1
       }}
       ],
       function(err, result) {
         res.send({ success: true, _error: null, data: result});
       }
     )
-    //res.send({ success: true, _error: null, data: "Test"});
   });
 
   app.post('/api/v1/upload', jsonParser, function(req, res){
@@ -43,7 +42,7 @@ module.exports = function(app) {
     console.log("[Router] Case Upload - Points: " + req.body.data.length); 
     let btId = ((req.query.btId) ? req.query.btId : undefined);
     var newCase = new Case({
-      status: 1,
+      status: 0,
       btId: btId,
       serverTime: new Date()
     });
@@ -71,7 +70,8 @@ module.exports = function(app) {
       }
     });
   });
-
+  //ToDo: Select Cache if build
+  //ToDo: GZIP Option for Download
   app.get('/api/v1/download', function(req, res){
     if (req.query.startId && ObjectId.isValid(req.query.startId) != true) {
       return res.status(403).send({
@@ -100,24 +100,17 @@ module.exports = function(app) {
           _id : 1 ,
           lat : 1 ,
           lng : 1 ,
+          speed : 1 ,
           time : 1
       }}
-      ],
-      function(err, result) {
+      ],function(err, result) {
         var latest = result.slice(-1).pop()._id;
         var is_update = (result.length < limit)
         var f = new Date();
         var diff = Math.abs(d - f);
         res.send({ success: true, _error: null, count: result.length, timeMS: diff, latestId:latest, isUptodate:is_update, data: result});
-        // "tags" is now filtered by condition and "joined"
       }
-    )
-    /*
-    Store.find( search, { lat: true, lng: true, time:true, speed:true, _id: true}).limit(limit).exec(function(err, result) {
-        if (err) throw err;
-        var latest = result.slice(-1).pop()._id;
-        var is_update = (result.length < limit)
-    });*/
+    );
   });
 
   app.get('/api/v1/case', function(req, res){
@@ -167,10 +160,7 @@ module.exports = function(app) {
             });
           })
         } else {
-          return res.status(403).send({
-            success: false,
-            _error: "No Case found to Delete"
-          });
+          return res.status(403).send({ success: false, _error: "No Case found to Delete" });
         }
     });
   });
@@ -190,53 +180,47 @@ module.exports = function(app) {
     if (req.query.status) set_status = req.query.status;
     console.log("[Router] Edit Case - ID:" + search_cases._id);
     Case.findOne( search_cases , {},function(err, result) {
-        if (err) throw err;
-        if(result) {
-          result.status = set_status;
-          result.save(search_cases,function(err, result) {
-            if (err) throw err;
-            var f = new Date();
-            var diff = Math.abs(d - f);
-            res.send({ success: true, _error: null, timeMS: diff, data: result});
-          })
-        } else {
-          return res.status(403).send({
-            success: false,
-            _error: "No Case found to Delete"
-          });
-        }
+      if (err) throw err;
+      if(result) {
+        result.status = set_status;
+        result.save(search_cases,function(err, result) {
+          if (err) throw err;
+          var f = new Date();
+          var diff = Math.abs(d - f);
+          res.send({ success: true, _error: null, timeMS: diff, data: result});
+        })
+      } else {
+        return res.status(403).send({ success: false, _error: "No Case found to Delete" });
+      }
     });
   });
 
   app.get('/api/v1/case/updatecache', function(req, res){
-        /*
-    Store.aggregate([
-      {$match:
-           {}
-      },
-      {$project:
-        {
-          _id:ObjectId(),
-          lat: '$lat'
-        }     
-      },
-      { $merage: { coll: Store, on: "_id", whenMatched: "replace", whenNotMatched: "insert" } }
-
-
-    ],
-    */
-   Store.aggregate( [
-    {$project:
-      {
-        _id:0,
-        lat: '$lat'
-      }     
-    },
-    { $merge: { into: "c", on: "_id", whenMatched: "replace", whenNotMatched: "insert" } }
-    ],
-    function(err, result) {
-      console.log(result)
-
-    });
+    console.log("[Router] Update Cache DB");
+    var d = new Date();
+    Store.aggregate( [
+        { $lookup: {
+          from: "cases",
+          localField: "caseId",
+          foreignField: "_id",
+          as: "caseId"
+        }},
+        { $unwind: "$caseId" },
+        { $match: {"caseId.status": {$gte: 1}}},
+        { $project : {
+          _id : 1 ,
+          caseId: 1,
+          lat : 1 ,
+          lng : 1 ,
+          speed : 1 ,
+          time : 1
+        }},
+        { $merge: { into: "c", on: "_id", whenMatched: "replace", whenNotMatched: "insert" } }
+      ],function(err, result){
+        var f = new Date();
+        var diff = Math.abs(d - f);
+        res.send({ success: true, _error: null, timeMS: diff, data: result});
+      }
+    );
   });
 };
