@@ -1,4 +1,6 @@
 var mongoose = require('mongoose');
+const passportLocalMongoose = require('passport-local-mongoose');
+
 var Schema = mongoose.Schema;
 
 var CaseSchema = new Schema({
@@ -23,11 +25,13 @@ var CaseSchema = new Schema({
   status: {
     type: Number
   },
+  username: String,
+  password: String,
   id: false
 },{
   toObject: { virtuals: true },
   toJSON: { virtuals: true },
 });
-
+CaseSchema.plugin(passportLocalMongoose);
 
 module.exports = mongoose.model('Case', CaseSchema);

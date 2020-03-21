@@ -1,14 +1,17 @@
 // server.js
 require('console-stamp')(console, '[HH:MM:ss.l]');
 require("dotenv").config();
+var Case = require('./app/models/case');
+
 var fs = require("fs");
 var path = require("path");
 var express = require("express");
 var app = express();
 var mongoose = require("mongoose");
 var morgan = require("morgan");
-var session = require("express-session");
 var configDB = require("./config/database.js");
+const bodyParser = require('body-parser');
+
 
 if (process.env.NODE_ENV !== "development") {
   const privateKey = fs.readFileSync(
@@ -52,7 +55,7 @@ if (process.env.NODE_ENV !== "development") {
   var port_s = process.env.PORT_S || 3001;
 }
 
-const MongoStore = require("connect-mongo")(session);
+//const MongoStore = require("connect-mongo")(session);
 mongoose.connect(configDB.url, { useNewUrlParser: true, useUnifiedTopology: true }); // connect to our database
 mongoose.set("useCreateIndex", true);
 
@@ -63,36 +66,24 @@ app.use(morgan("combined", { stream: accessLogStream }));
 
 
 // required for passport
-app.use(
-  session({
-    secret: "ilowMxsa!nmc!cpfmac", // session secret
-    //cookie: { _expires: (24 * 60 * 60 * 1000) },
-    resave: true,
-    saveUninitialized: true,
-    store: new MongoStore({ mongooseConnection: mongoose.connection })
-  })
-);
-
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header("Access-Control-Allow-Origin", req.headers.origin);
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET,PUT,POST,DELETE,PATCH,OPTIONS"
-  );
-  res.header(
-    "Access-Control-Allow-Headers",
-    "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept, Authorization"
-  );
-  if ("OPTIONS" == req.method) {
-    res.send(200);
-  } else {
-    next();
-  }
+const expressSession = require('express-session')({
+  secret: 'secret',
+  resave: false,
+  saveUninitialized: false
 });
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(expressSession);
+const passport = require('passport');
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.use(Case.createStrategy());
+passport.serializeUser(Case.serializeUser());
+passport.deserializeUser(Case.deserializeUser());
 
 // routes ======================================================================
-require("./app/routes.js")(app); // load our routes and pass in our app and fully configured passport
+require("./app/routes.js")(app, passport); // load our routes
 
 // http API Server
 httpServer.listen(port, () => {
@@ -110,3 +101,5 @@ process.on("SIGINT", () => {
   console.log("Bye bye!");
   process.exit();
 });
+
+Case.register({username:'aba', active: false}, 'aba');

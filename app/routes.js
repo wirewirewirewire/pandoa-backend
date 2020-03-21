@@ -2,13 +2,14 @@ var Case = require('./models/case');
 var Store = require('./models/store');
 var ObjectId = require('mongoose').Types.ObjectId;
 var bodyParser = require('body-parser')
+const connectEnsureLogin = require('connect-ensure-login');
 var jsonParser = bodyParser.json({
   limit: '50mb'
 })
 
 
 
-module.exports = function(app) {
+module.exports = function(app, passport) {
   app.get("/api/v1/test", function(req, res) {
     console.log("[Router] Test Endpoint")
     var search = {};
@@ -44,30 +45,33 @@ module.exports = function(app) {
     var newCase = new Case({
       status: 0,
       btId: btId,
-      serverTime: new Date()
+      serverTime: new Date(),
+      username: "bla"
     });
-    newCase.save(function (err) {
-      if (err) {
-        console.log("[Router] Save Case Error: " + err);
-        return res.status(403).send({ success: false, _error: err });
-      } else {
-        const stores_array = [];
-        for(var k in req.body.data) {
-          let speed = ((req.body.data[k].speed) ? req.body.data[k].speed : undefined);
-          var newstore = new Store({
-            caseId: ObjectId(newCase._id),
-            lat: req.body.data[k].lat,
-            lng: req.body.data[k].lng,
-            time:  new Date(req.body.data[k].time),
-            speed: speed
-          });
-          stores_array.push(newstore);      
+    newCase.setPassword("bla", function () {
+      newCase.save(function (err) {
+        if (err) {
+          console.log("[Router] Save Case Error: " + err);
+          return res.status(403).send({ success: false, _error: err });
+        } else {
+          const stores_array = [];
+          for(var k in req.body.data) {
+            let speed = ((req.body.data[k].speed) ? req.body.data[k].speed : undefined);
+            var newstore = new Store({
+              caseId: ObjectId(newCase._id),
+              lat: req.body.data[k].lat,
+              lng: req.body.data[k].lng,
+              time:  new Date(req.body.data[k].time),
+              speed: speed
+            });
+            stores_array.push(newstore);      
+          }
+          Store.insertMany(stores_array);
+          var f = new Date();
+          var diff = Math.abs(d - f);
+          res.send({ success: true, _error: null, count: req.body.data.length, timeMS: diff, caseId:newCase._id, btId:newCase.btId});
         }
-        Store.insertMany(stores_array);
-        var f = new Date();
-        var diff = Math.abs(d - f);
-        res.send({ success: true, _error: null, count: req.body.data.length, timeMS: diff, caseId:newCase._id, btId:newCase.btId});
-      }
+      });
     });
   });
   //ToDo: Select Cache if build
@@ -164,7 +168,8 @@ module.exports = function(app) {
         }
     });
   });
-  app.get('/api/v1/case/edit', function(req, res){
+  app.get('/api/v1/case/edit', connectEnsureLogin.ensureLoggedIn(), function(req, res){
+    
     if (ObjectId.isValid(req.query.id) != true) {
       return res.status(403).send({
         success: false,
@@ -174,23 +179,25 @@ module.exports = function(app) {
     var d = new Date();
     var search_cases = {};
     var search_stores = {};
-    var set_status = 0;
+    var set_status;
+    var bt_id;
     var contactInfo = [];
     if (req.query.id) search_cases["_id"] = ObjectId(req.query.id);
     if (req.query.id) search_stores["caseId"] = ObjectId(req.query.id);
     if (req.query.status) set_status = req.query.status;
+    if (req.query.btId) bt_id = req.query.btId;
     if (req.query.phone) contactInfo.phone = req.query.phone;
     if (req.query.info) contactInfo.info = req.query.info;
     if (req.query.text) contactInfo.text = req.query.text;
-    console.log(contactInfo);
     console.log("[Router] Edit Case - ID:" + search_cases._id);
     Case.findOne( search_cases , {},function(err, result) {
       if (err) throw err;
       if(result) {
-        result.status = set_status;
-        result.contactInfo.phone = contactInfo.phone;
-        result.contactInfo.info = contactInfo.info;
-        result.contactInfo.text = contactInfo.text;
+        if (set_status) result.status = set_status;
+        if (bt_id) result.btId = bt_id;
+        if (contactInfo.phone) result.contactInfo.phone = contactInfo.phone;
+        if (contactInfo.info) result.contactInfo.info = contactInfo.info;
+        if (contactInfo.text) result.contactInfo.text = contactInfo.text;
         result.save(search_cases,function(err, result) {
           if (err) throw err;
           var f = new Date();
@@ -231,4 +238,30 @@ module.exports = function(app) {
       }
     );
   });
+
+  app.post('/api/v1/login', (req, res, next) => {
+    passport.authenticate('local',
+    (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+  
+      if (!user) { 
+        return res.redirect('/login?info=' + info); 
+      }
+  
+      req.logIn(user, function(err) {
+        if (err) {
+          return next(err);
+        }
+  
+        return res.send({ success: true, _error: "Login Success"});
+      });
+  
+    })(req, res, next);
+  });
+  app.get('/api/v1/logout', function(req, res) {
+		req.logout();
+		return res.send({ success: true, _error: "Logout Success"});
+	});
 };
