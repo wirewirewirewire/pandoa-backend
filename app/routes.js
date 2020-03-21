@@ -175,14 +175,22 @@ module.exports = function(app) {
     var search_cases = {};
     var search_stores = {};
     var set_status = 0;
+    var contactInfo = [];
     if (req.query.id) search_cases["_id"] = ObjectId(req.query.id);
     if (req.query.id) search_stores["caseId"] = ObjectId(req.query.id);
     if (req.query.status) set_status = req.query.status;
+    if (req.query.phone) contactInfo.phone = req.query.phone;
+    if (req.query.info) contactInfo.info = req.query.info;
+    if (req.query.text) contactInfo.text = req.query.text;
+    console.log(contactInfo);
     console.log("[Router] Edit Case - ID:" + search_cases._id);
     Case.findOne( search_cases , {},function(err, result) {
       if (err) throw err;
       if(result) {
         result.status = set_status;
+        result.contactInfo.phone = contactInfo.phone;
+        result.contactInfo.info = contactInfo.info;
+        result.contactInfo.text = contactInfo.text;
         result.save(search_cases,function(err, result) {
           if (err) throw err;
           var f = new Date();

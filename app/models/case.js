@@ -15,6 +15,11 @@ var CaseSchema = new Schema({
     type: String,
     required: false
   },
+  contactInfo: {
+    phone: String,
+    info: String,
+    text: String
+  },
   status: {
     type: Number
   },
