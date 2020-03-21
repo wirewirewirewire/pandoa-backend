@@ -79,11 +79,10 @@ module.exports = function(app) {
         _error: "Error: ObjectID emty format. Argument passed in must be a single String of 12 bytes or a string of 24 hex characters."
       });
     }
-    var limit = 5;
+    var limit = 5000;
     var d = new Date();
     var search = {"caseId.status": 1}
     if (req.query.startId) search["_id"] = {$gte: ObjectId(req.query.startId)};
-    console.log("[Router] Case Download ID: " + req.query.startId);
     Store.aggregate(
       [
         { $lookup: {
@@ -108,7 +107,8 @@ module.exports = function(app) {
         var is_update = (result.length < limit)
         var f = new Date();
         var diff = Math.abs(d - f);
-        res.send({ success: true, _error: null, count: result.length, timeMS: diff, latestId:latest, isUptodate:is_update, data: result});
+        console.log("[Router] Case Download ID: " + req.query.startId + " Points: " + result.length);
+        res.send({ success: true, _error: null, count: result.length, timeMS: diff, latestId:latest, isNewest:is_update, data: result});
       }
     );
   });
