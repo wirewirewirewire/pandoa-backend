@@ -40,15 +40,17 @@ module.exports = function(app, passport) {
 
   app.post('/api/v1/upload', jsonParser, function(req, res){
     var d = new Date();
-    console.log("[Router] Case Upload - Points: " + req.body.data.length); 
+    console.log("[Router] Case Upload - Points: " + req.body.data.length);
+    if (req.query.username) var username = req.query.username; else return res.send({ success: false, _error: "No Username set"});
+    if (req.query.password) var password = req.query.password; else return res.send({ success: false, _error: "No Password set"}); 
     let btId = ((req.query.btId) ? req.query.btId : undefined);
     var newCase = new Case({
       status: 0,
       btId: btId,
       serverTime: new Date(),
-      username: "bla"
+      username: username
     });
-    newCase.setPassword("bla", function () {
+    newCase.setPassword(password, function () {
       newCase.save(function (err) {
         if (err) {
           console.log("[Router] Save Case Error: " + err);
@@ -116,7 +118,7 @@ module.exports = function(app, passport) {
       }
     );
   });
-
+  //ToDo: Change from Filter to Passwort auth
   app.get('/api/v1/case', function(req, res){
     var d = new Date();
     var n = d.toLocaleTimeString();
@@ -138,8 +140,8 @@ module.exports = function(app, passport) {
         });
     });
   });
-  app.get('/api/v1/case/del', function(req, res){
-    if (ObjectId.isValid(req.query.id) != true) {
+  app.get('/api/v1/case/del', connectEnsureLogin.ensureLoggedIn(), function(req, res){
+    if (ObjectId.isValid(req.user._id) != true) {
       return res.status(403).send({
         success: false,
         _error: "Error: ObjectID emty format. Argument passed in must be a single String of 12 bytes or a string of 24 hex characters."
@@ -148,8 +150,8 @@ module.exports = function(app, passport) {
     var d = new Date();
     var search_cases = {};
     var search_stores = {};
-    if (req.query.id) search_cases["_id"] = ObjectId(req.query.id);
-    if (req.query.id) search_stores["caseId"] = ObjectId(req.query.id);
+    if (req.user._id) search_cases["_id"] = ObjectId(req.user._id);
+    if (req.user._id) search_stores["caseId"] = ObjectId(req.user._id);
     console.log("[Router] Del Case - ID:" + search_cases._id);
     Case.findOne( search_cases , {},function(err, result) {
         if (err) throw err;
@@ -169,8 +171,7 @@ module.exports = function(app, passport) {
     });
   });
   app.get('/api/v1/case/edit', connectEnsureLogin.ensureLoggedIn(), function(req, res){
-    
-    if (ObjectId.isValid(req.query.id) != true) {
+    if (ObjectId.isValid(req.user._id) != true) {
       return res.status(403).send({
         success: false,
         _error: "Error: ObjectID emty format. Argument passed in must be a single String of 12 bytes or a string of 24 hex characters."
@@ -182,8 +183,8 @@ module.exports = function(app, passport) {
     var set_status;
     var bt_id;
     var contactInfo = [];
-    if (req.query.id) search_cases["_id"] = ObjectId(req.query.id);
-    if (req.query.id) search_stores["caseId"] = ObjectId(req.query.id);
+    if (req.user._id) search_cases["_id"] = ObjectId(req.user._id);
+    if (req.user._id) search_stores["caseId"] = ObjectId(req.user._id);
     if (req.query.status) set_status = req.query.status;
     if (req.query.btId) bt_id = req.query.btId;
     if (req.query.phone) contactInfo.phone = req.query.phone;
@@ -247,7 +248,7 @@ module.exports = function(app, passport) {
       }
   
       if (!user) { 
-        return res.redirect('/login?info=' + info); 
+        return res.send({ success: false, _error: "User does not exist or Passwort false"});
       }
   
       req.logIn(user, function(err) {

@@ -101,5 +101,3 @@ process.on("SIGINT", () => {
   console.log("Bye bye!");
   process.exit();
 });
-
-Case.register({username:'aba', active: false}, 'aba');
