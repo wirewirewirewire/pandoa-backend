@@ -22,6 +22,15 @@ var StoreSchema = new Schema({
   time: {
     type: Date
   },
+  geocode: {
+    street: String,
+    city: String,
+    region: String,
+    postalCode: Number,
+    country: String,
+    name: String,
+    isoCountryCode: String,
+  },
   status: {
     type: Number
   },

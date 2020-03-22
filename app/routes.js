@@ -59,12 +59,15 @@ module.exports = function(app, passport) {
           const stores_array = [];
           for(var k in req.body.data) {
             let speed = ((req.body.data[k].speed) ? req.body.data[k].speed : undefined);
+            let geocode = ((req.body.data[k].geocode) ? req.body.data[k].geocode[0] : undefined);
+            console.log(geocode);
             var newstore = new Store({
               caseId: ObjectId(newCase._id),
               lat: req.body.data[k].lat,
               lng: req.body.data[k].lng,
               time:  new Date(req.body.data[k].time),
-              speed: speed
+              speed: speed,
+              geocode: geocode
             });
             stores_array.push(newstore);      
           }
