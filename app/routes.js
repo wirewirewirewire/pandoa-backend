@@ -140,7 +140,7 @@ module.exports = function(app, passport) {
         });
     });
   });
-  app.get('/api/v1/case/del', connectEnsureLogin.ensureLoggedIn(), function(req, res){
+  app.get('/api/v1/case/del', connectEnsureLogin.ensureLoggedIn("/api/v1/login"), function(req, res){
     if (ObjectId.isValid(req.user._id) != true) {
       return res.status(403).send({
         success: false,
@@ -170,7 +170,7 @@ module.exports = function(app, passport) {
         }
     });
   });
-  app.get('/api/v1/case/edit', connectEnsureLogin.ensureLoggedIn(), function(req, res){
+  app.get('/api/v1/case/edit', connectEnsureLogin.ensureLoggedIn("/api/v1/login"), function(req, res){
     if (ObjectId.isValid(req.user._id) != true) {
       return res.status(403).send({
         success: false,
@@ -260,6 +260,13 @@ module.exports = function(app, passport) {
       });
   
     })(req, res, next);
+  });
+  app.get('/api/v1/login', (req, res, next) => {
+    if (!req.user) {
+      return res.send({ success: false, _error: "You are not logged in. Please try again!"});
+    } else {
+      return res.send({ success: true, _error: "You are logged in"});
+    }
   });
   app.get('/api/v1/logout', function(req, res) {
 		req.logout();
