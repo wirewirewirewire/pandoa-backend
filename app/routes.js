@@ -112,6 +112,7 @@ module.exports = function(app, passport) {
           time : 1
       }}
       ],function(err, result) {
+        if (result.length <= 0) return res.send({ success: false, _error: "No Stores found"});
         var latest = result.slice(-1).pop()._id;
         var is_update = (result.length < limit)
         var f = new Date();
@@ -245,25 +246,18 @@ module.exports = function(app, passport) {
 
   app.post('/api/v1/login', (req, res, next) => {
     passport.authenticate('local',
-    (err, user, info) => {
-      if (err) {
-        return next(err);
+      (err, user, info) => {
+        if (err) return next(err)
+        if (!user) return res.send({ success: false, _error: "User does not exist or Passwort false"});
+
+        req.logIn(user, function(err) {
+          if (err) return next(err);
+          return res.send({ success: true, _error: "Login Success"});
+        });
       }
-  
-      if (!user) { 
-        return res.send({ success: false, _error: "User does not exist or Passwort false"});
-      }
-  
-      req.logIn(user, function(err) {
-        if (err) {
-          return next(err);
-        }
-  
-        return res.send({ success: true, _error: "Login Success"});
-      });
-  
-    })(req, res, next);
+    )(req, res, next);
   });
+
   app.get('/api/v1/login', (req, res, next) => {
     if (!req.user) {
       return res.send({ success: false, _error: "You are not logged in. Please try again!"});
@@ -271,8 +265,10 @@ module.exports = function(app, passport) {
       return res.send({ success: true, _error: "You are logged in"});
     }
   });
+
   app.get('/api/v1/logout', function(req, res) {
 		req.logout();
 		return res.send({ success: true, _error: "Logout Success"});
-	});
+  });
+  
 };
