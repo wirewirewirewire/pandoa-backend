@@ -1,41 +1,22 @@
 var Case = require('./models/case');
 var Store = require('./models/store');
 var ObjectId = require('mongoose').Types.ObjectId;
-var bodyParser = require('body-parser')
+var bodyParser = require('body-parser');
+const Hashids = require('hashids/cjs');
 const connectEnsureLogin = require('connect-ensure-login');
 var jsonParser = bodyParser.json({
   limit: '50mb'
 })
+const hashids = new Hashids("pando tracker",20)
 
 
 
 module.exports = function(app, passport) {
   app.get("/api/v1/test", function(req, res) {
     console.log("[Router] Test Endpoint")
-    var search = {};
-    if (req.query.id) search["_id"] = req.query.id;
-    Store.aggregate(
-      [
-        { $lookup: {
-          from: "cases",
-          localField: "caseId",
-          foreignField: "_id",
-          as: "caseId"
-        }},
-        { $unwind: "$caseId" },
-        { $match: { "caseId.status": 1 } },
-        { $project : {
-          _id : 0 ,
-          lat : 1 ,
-          lng : 1 ,
-          time : 1,
-          speed: 1
-      }}
-      ],
-      function(err, result) {
-        res.send({ success: true, _error: null, data: result});
-      }
-    )
+    var ids = hashids.decodeHex(req.query.id)
+    console.log(ids)
+    res.send({ success: true, _error: null, data:ids});
   });
 
   app.post('/api/v1/upload', jsonParser, function(req, res){
@@ -60,7 +41,6 @@ module.exports = function(app, passport) {
           for(var k in req.body.data) {
             let speed = ((req.body.data[k].speed) ? req.body.data[k].speed : undefined);
             let geocode = ((req.body.data[k].geocode) ? req.body.data[k].geocode[0] : undefined);
-            console.log(geocode);
             var newstore = new Store({
               caseId: ObjectId(newCase._id),
               lat: req.body.data[k].lat,
@@ -74,7 +54,8 @@ module.exports = function(app, passport) {
           Store.insertMany(stores_array);
           var f = new Date();
           var diff = Math.abs(d - f);
-          res.send({ success: true, _error: null, count: req.body.data.length, timeMS: diff, caseId:newCase._id, btId:newCase.btId});
+          let caseId_hash = hashids.encodeHex(ObjectId(newCase._id).toString());
+          res.send({ success: true, _error: null, count: req.body.data.length, timeMS: diff, caseId:caseId_hash, btId:newCase.btId});
         }
       });
     });
