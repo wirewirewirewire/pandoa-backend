@@ -13,18 +13,9 @@ var configDB = require("./config/database.js");
 const bodyParser = require("body-parser");
 
 if (process.env.NODE_ENV !== "development") {
-  const privateKey = fs.readFileSync(
-    "/etc/letsencrypt/live/pandoa.wirewire.de/privkey.pem",
-    "utf8"
-  );
-  const certificate = fs.readFileSync(
-    "/etc/letsencrypt/live/pandoa.wirewire.de/cert.pem",
-    "utf8"
-  );
-  const ca = fs.readFileSync(
-    "/etc/letsencrypt/live/pandoa.wirewire.de/chain.pem",
-    "utf8"
-  );
+  const privateKey = fs.readFileSync("/etc/letsencrypt/live/pandoa.wirewire.de/privkey.pem", "utf8");
+  const certificate = fs.readFileSync("/etc/letsencrypt/live/pandoa.wirewire.de/cert.pem", "utf8");
+  const ca = fs.readFileSync("/etc/letsencrypt/live/pandoa.wirewire.de/chain.pem", "utf8");
   var credentials = {
     key: privateKey,
     cert: certificate,
