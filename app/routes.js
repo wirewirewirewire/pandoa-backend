@@ -44,7 +44,7 @@ module.exports = function(app, passport) {
             let geocode = req.body.data[k].geocode ? req.body.data[k].geocode[0] : undefined;
             var newstore = new Store({
               caseId: ObjectId(newCase._id),
-              coordinates: [req.body.data[k].lng, req.body.data[k].lat],
+              location: { coordinates: [req.body.data[k].lng, req.body.data[k].lat] },
               time: new Date(req.body.data[k].time),
               speed: speed,
               geocode: geocode
@@ -108,8 +108,7 @@ module.exports = function(app, passport) {
         {
           $project: {
             _id: 1,
-            lat: 1,
-            lng: 1,
+            coordinates: 1,
             speed: 1,
             time: 1
           }
@@ -267,7 +266,7 @@ module.exports = function(app, passport) {
             _id: 1,
             caseId: 1,
             lat: 1,
-            lng: 1,
+            coordinates: 1,
             speed: 1,
             time: 1
           }
@@ -333,8 +332,32 @@ module.exports = function(app, passport) {
   });
 
   /*match gps from json upload with database and return all time/location matches with some info about risk*/
+  //ToDo: Need to handle Array maybe?
+  //Should return status or complete match. depends on privacy settings of uploader
+
   app.get("/api/v1/data/match", function(req, res) {
-    req.logout();
-    return res.send({ success: true, _error: null, data: "Logout Success" });
+    if (req.query.lat) var lat = req.query.lat;
+    if (req.query.lng) var lng = req.query.lng;
+    if (req.query.time) var time = req.query.time;
+
+    Store.aggregate(
+      [
+        {
+          $geoNear: {
+            near: {
+              type: "Point",
+              coordinates: [parseFloat(lng), parseFloat(lat)]
+            },
+            distanceField: "distance",
+            maxDistance: 200,
+            spherical: true
+          }
+        }
+      ],
+      function(err, result) {
+        console.log(result);
+        return res.send({ success: true, _error: null, data: result });
+      }
+    );
   });
 };

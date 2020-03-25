@@ -8,17 +8,14 @@ var StoreSchema = new Schema(
       ref: "Case",
       required: true
     },
-    coordinates: {
-      type: [Number],
-      index: "2dsphere"
-    },
-    lat: {
-      type: Number,
-      required: false
-    },
-    lng: {
-      type: Number,
-      required: false
+    location: {
+      // It's important to define type within type field, because
+      // mongoose use "type" to identify field's object type.
+      type: { type: String, default: "Point" },
+      // Default value is needed. Mongoose pass an empty array to
+      // array type by default, but it will fail MongoDB's pre-save
+      // validation.
+      coordinates: { type: [Number], index: "2dsphere" }
     },
     speed: {
       type: Number,

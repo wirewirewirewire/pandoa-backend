@@ -45,7 +45,6 @@ if (process.env.NODE_ENV !== "development") {
   var port_s = process.env.PORT_S || 3001;
 }
 
-//const MongoStore = require("connect-mongo")(session);
 mongoose.connect(configDB.url, {
   useNewUrlParser: true,
   useUnifiedTopology: true
