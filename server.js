@@ -1,7 +1,7 @@
 // server.js
-require('console-stamp')(console, '[HH:MM:ss.l]');
+require("console-stamp")(console, "[HH:MM:ss.l]");
 require("dotenv").config();
-var Case = require('./app/models/case');
+var Case = require("./app/models/case");
 
 var fs = require("fs");
 var path = require("path");
@@ -10,8 +10,7 @@ var app = express();
 var mongoose = require("mongoose");
 var morgan = require("morgan");
 var configDB = require("./config/database.js");
-const bodyParser = require('body-parser');
-
+const bodyParser = require("body-parser");
 
 if (process.env.NODE_ENV !== "development") {
   const privateKey = fs.readFileSync(
@@ -40,7 +39,7 @@ const httpServer = require("http").createServer(app);
 const httpApp = express();
 
 // configuration ===============================================================
-console.log ("[Server] Environmend for Server is: "  + process.env.NODE_ENV);
+console.log("[Server] Environmend for Server is: " + process.env.NODE_ENV);
 if (process.env.NODE_ENV !== "development") {
   httpApp.all("*", (req, res) => {
     res.redirect("https://" + req.headers.host + req.url);
@@ -56,7 +55,10 @@ if (process.env.NODE_ENV !== "development") {
 }
 
 //const MongoStore = require("connect-mongo")(session);
-mongoose.connect(configDB.url, { useNewUrlParser: true, useUnifiedTopology: true }); // connect to our database
+mongoose.connect(configDB.url, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}); // connect to our database
 mongoose.set("useCreateIndex", true);
 
 var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
@@ -64,17 +66,16 @@ var accessLogStream = fs.createWriteStream(path.join(__dirname, "access.log"), {
 });
 app.use(morgan("combined", { stream: accessLogStream }));
 
-
 // required for passport
-const expressSession = require('express-session')({
-  secret: 'secret',
+const expressSession = require("express-session")({
+  secret: "secret",
   resave: false,
   saveUninitialized: false
 });
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(expressSession);
-const passport = require('passport');
+const passport = require("passport");
 app.use(passport.initialize());
 app.use(passport.session());
 
