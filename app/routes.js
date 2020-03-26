@@ -108,7 +108,8 @@ module.exports = function(app, passport) {
         {
           $project: {
             _id: 1,
-            coordinates: 1,
+            lat: { $arrayElemAt: ["$location.coordinates", 1] },
+            lng: { $arrayElemAt: ["$location.coordinates", 0] },
             speed: 1,
             time: 1
           }
