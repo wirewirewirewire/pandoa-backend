@@ -20,60 +20,64 @@ module.exports = function(app, passport) {
   /*Upload GPS Data with timestamps and create a new case with unique ID for this dataset*/
   app.post("/api/v1/upload", jsonParser, function(req, res) {
     var d = new Date();
-    console.log("[Router] Case Upload - Points: " + req.body.data.length);
     if (req.query.username) var username = req.query.username;
     else return res.send({ success: false, _error: "No Username set" });
     if (req.query.password) var password = req.query.password;
     else return res.send({ success: false, _error: "No Password set" });
     let btId = req.query.btId ? req.query.btId : undefined;
-    var newCase = new Case({
-      status: 0,
-      btId: btId,
-      serverTime: new Date(),
-      username: username
-    });
-    newCase.setPassword(password, function() {
-      newCase.save(function(err) {
-        if (err) {
-          console.log("[Router] Save Case Error: " + err);
-          return res.status(403).send({ success: false, _error: err });
-        } else {
-          const stores_array = [];
-          for (var k in req.body.data) {
-            let speed = req.body.data[k].speed ? req.body.data[k].speed : undefined;
-            let geocode = req.body.data[k].geocode ? req.body.data[k].geocode[0] : undefined;
-            var newstore = new Store({
-              caseId: ObjectId(newCase._id),
-              location: { coordinates: [req.body.data[k].lng, req.body.data[k].lat] },
-              time: new Date(req.body.data[k].time),
-              speed: speed,
-              geocode: geocode
-            });
-            stores_array.push(newstore);
-          }
-          Store.insertMany(stores_array, function(err, result) {
-            if (err) {
-              if (err.code == "16755") {
-                return res.send({
-                  success: false,
-                  _error: "False Geocode in uploaded JSON, Check coordinates."
-                });
-              }
-              throw err;
+    Case.findOne({ username: username }, function(err, result) {
+      if (result) return res.send({ success: false, _error: "username already given. Please use another" });
+      console.log("[Router] Case Upload - Points: " + req.body.data.length);
+      var newCase = new Case({
+        status: 0,
+        btId: btId,
+        serverTime: new Date(),
+        username: username,
+        privacyLevel: 0
+      });
+      newCase.setPassword(password, function() {
+        newCase.save(function(err) {
+          if (err) {
+            console.log("[Router] Save Case Error: " + err);
+            return res.status(403).send({ success: false, _error: err });
+          } else {
+            const stores_array = [];
+            for (var k in req.body.data) {
+              let speed = req.body.data[k].speed ? req.body.data[k].speed : undefined;
+              let geocode = req.body.data[k].geocode ? req.body.data[k].geocode[0] : undefined;
+              var newstore = new Store({
+                caseId: ObjectId(newCase._id),
+                location: { coordinates: [req.body.data[k].lng, req.body.data[k].lat] },
+                time: new Date(req.body.data[k].time),
+                speed: speed,
+                geocode: geocode
+              });
+              stores_array.push(newstore);
             }
-            var f = new Date();
-            var diff = Math.abs(d - f);
-            let caseId_hash = hashids.encodeHex(ObjectId(newCase._id).toString());
-            res.send({
-              success: true,
-              _error: null,
-              count: req.body.data.length,
-              timeMS: diff,
-              caseId: caseId_hash,
-              btId: newCase.btId
+            Store.insertMany(stores_array, function(err, result) {
+              if (err) {
+                if (err.code == "16755") {
+                  return res.send({
+                    success: false,
+                    _error: "False Geocode in uploaded JSON, Check coordinates."
+                  });
+                }
+                throw err;
+              }
+              var f = new Date();
+              var diff = Math.abs(d - f);
+              let caseId_hash = hashids.encodeHex(ObjectId(newCase._id).toString());
+              res.send({
+                success: true,
+                _error: null,
+                count: req.body.data.length,
+                timeMS: diff,
+                caseId: caseId_hash,
+                btId: newCase.btId
+              });
             });
-          });
-        }
+          }
+        });
       });
     });
   });
@@ -220,12 +224,14 @@ module.exports = function(app, passport) {
     if (req.query.phone) contactInfo.phone = req.query.phone;
     if (req.query.info) contactInfo.info = req.query.info;
     if (req.query.text) contactInfo.text = req.query.text;
+    if (req.query.privacyLevel) var privacyLevel = req.query.privacyLevel;
     console.log("[Router] Edit Case - ID:" + search_cases._id);
     Case.findOne(search_cases, {}, function(err, result) {
       if (err) throw err;
       if (result) {
         if (set_status) result.status = set_status;
         if (bt_id) result.btId = bt_id;
+        if (privacyLevel) result.privacyLevel = privacyLevel;
         if (contactInfo.phone) result.contactInfo.phone = contactInfo.phone;
         if (contactInfo.info) result.contactInfo.info = contactInfo.info;
         if (contactInfo.text) result.contactInfo.text = contactInfo.text;

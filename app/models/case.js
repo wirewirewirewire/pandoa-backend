@@ -10,9 +10,16 @@ var CaseSchema = new Schema(
       type: Number,
       required: false
     },
+    //0:Privat: Share match only, 1: Share Position and Time
+    privacyLevel: {
+      type: Number,
+      required: false,
+      default: 0
+    },
     serverTime: {
       type: Date,
-      required: false
+      required: false,
+      default: Date.now
     },
     btId: {
       type: String,
