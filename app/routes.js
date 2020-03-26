@@ -344,7 +344,9 @@ module.exports = function(app, passport) {
 
   app.get("/api/v1/data/match", function(req, res) {
     if (req.query.lat) var lat = req.query.lat;
+    else return res.send({ success: false, _error: "Please input at least Lat and Lng" });
     if (req.query.lng) var lng = req.query.lng;
+    else return res.send({ success: false, _error: "Please input at least Lat and Lng" });
     if (req.query.time) var time = req.query.time;
 
     Store.aggregate(
@@ -359,10 +361,39 @@ module.exports = function(app, passport) {
             maxDistance: 200,
             spherical: true
           }
+        },
+        {
+          $lookup: {
+            from: "cases",
+            localField: "caseId",
+            foreignField: "_id",
+            as: "caseId"
+          }
+        },
+        { $unwind: "$caseId" },
+        {
+          $project: {
+            _id: 0,
+            lat: { $arrayElemAt: ["$location.coordinates", 1] },
+            lng: { $arrayElemAt: ["$location.coordinates", 0] },
+            speed: 1,
+            time: 1,
+            status: "$caseId.status",
+            privacyLevel: "$caseId.privacyLevel"
+          }
         }
       ],
       function(err, result) {
         console.log(result);
+        let matchCount = result.length;
+        if (matchCount == 0) return res.send({ success: true, _error: null, data: { isMatch: 0, matchCount: 0 } });
+        if (result[0].privacyLevel === 0) {
+          console.log("is Private");
+          result = {};
+          result["privacyLevel"] = 0;
+          result["isMatch"] = 1;
+          result["matchCount"] = matchCount;
+        }
         return res.send({ success: true, _error: null, data: result });
       }
     );
