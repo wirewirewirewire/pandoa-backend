@@ -43,11 +43,19 @@ module.exports = function(app, passport) {
           } else {
             const stores_array = [];
             for (var k in req.body.data) {
+              let coordinates =
+                req.body.data[k].lat && req.body.data[k].lng
+                  ? { coordinates: [req.body.data[k].lng, req.body.data[k].lat], type: "point" }
+                  : undefined;
               let speed = req.body.data[k].speed ? req.body.data[k].speed : undefined;
+              let type = req.body.data[k].type ? req.body.data[k].type : "point";
               let geocode = req.body.data[k].geocode ? req.body.data[k].geocode[0] : undefined;
+              let btId = req.body.data[k].btId ? req.body.data[k].btId : undefined;
               var newstore = new Store({
+                type: type,
                 caseId: ObjectId(newCase._id),
-                location: { coordinates: [req.body.data[k].lng, req.body.data[k].lat] },
+                location: coordinates,
+                btId: btId,
                 time: new Date(req.body.data[k].time),
                 speed: speed,
                 geocode: geocode
@@ -112,10 +120,11 @@ module.exports = function(app, passport) {
         {
           $project: {
             _id: 1,
-            lat: { $arrayElemAt: ["$location.coordinates", 1] },
-            lng: { $arrayElemAt: ["$location.coordinates", 0] },
+            lat: { $ifNull: [{ $arrayElemAt: ["$location.coordinates", 1] }, undefined] },
+            lng: { $ifNull: [{ $arrayElemAt: ["$location.coordinates", 0] }, undefined] },
             speed: 1,
-            time: 1
+            time: 1,
+            btId: 1
           }
         }
       ],
@@ -349,6 +358,8 @@ module.exports = function(app, passport) {
     else return res.send({ success: false, _error: "Please input at least Lat and Lng" });
     if (req.query.time) var time = req.query.time;
 
+    console.log("[Router] Waypoint match Request Lat:" + lat + " Lng:" + lng);
+
     Store.aggregate(
       [
         {
@@ -384,7 +395,6 @@ module.exports = function(app, passport) {
         }
       ],
       function(err, result) {
-        console.log(result);
         let matchCount = result.length;
         if (matchCount == 0) return res.send({ success: true, _error: null, data: { isMatch: 0, matchCount: 0 } });
         if (result[0].privacyLevel === 0) {
