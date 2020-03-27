@@ -75,14 +75,7 @@ module.exports = function(app, passport) {
               var f = new Date();
               var diff = Math.abs(d - f);
               let caseId_hash = hashids.encodeHex(ObjectId(newCase._id).toString());
-              res.send({
-                success: true,
-                _error: null,
-                count: req.body.data.length,
-                timeMS: diff,
-                caseId: caseId_hash,
-                btId: newCase.btId
-              });
+              res.send({ success: true, _error: null, count: req.body.data.length, timeMS: diff, caseId: caseId_hash, btId: newCase.btId });
             });
           }
         });
@@ -135,15 +128,7 @@ module.exports = function(app, passport) {
         var f = new Date();
         var diff = Math.abs(d - f);
         console.log("[Router] Case Download ID: " + req.query.startId + " Points: " + result.length);
-        res.send({
-          success: true,
-          _error: null,
-          count: result.length,
-          timeMS: diff,
-          latestId: latest,
-          isNewest: is_update,
-          data: result
-        });
+        res.send({ success: true, _error: null, count: result.length, timeMS: diff, latestId: latest, isNewest: is_update, data: result });
       }
     );
   });
@@ -166,12 +151,7 @@ module.exports = function(app, passport) {
       ret_value["contactInfo"] = result[0].contactInfo;
       ret_value["btId"] = result[0].btId;
 
-      res.send({
-        success: true,
-        _error: null,
-        timeMS: diff,
-        data: ret_value
-      });
+      res.send({ success: true, _error: null, timeMS: diff, data: ret_value });
     });
   });
 
@@ -198,12 +178,7 @@ module.exports = function(app, passport) {
             if (err) throw err;
             var f = new Date();
             var diff = Math.abs(d - f);
-            res.send({
-              success: true,
-              _error: null,
-              timeMS: diff,
-              data: result
-            });
+            res.send({ success: true, _error: null, timeMS: diff, data: result });
           });
         });
       } else {
@@ -248,12 +223,7 @@ module.exports = function(app, passport) {
           if (err) throw err;
           var f = new Date();
           var diff = Math.abs(d - f);
-          res.send({
-            success: true,
-            _error: null,
-            timeMS: diff,
-            data: result
-          });
+          res.send({ success: true, _error: null, timeMS: diff, data: result });
         });
       } else {
         return res.status(403).send({ success: false, _error: "No Case found to Delete" });
