@@ -12,6 +12,18 @@ const hashids = new Hashids("pando tracker", 20);
 module.exports = function(app, passport) {
   app.get("/api/v1/test", function(req, res) {
     console.log("[Router] Test Endpoint");
+    /* Test compare hashed GPS
+    var lat_test = 38.642872;
+    var lng_test = 149.407372;
+    var lat_compare = 38.652872;
+    var lng_compare = 149.407372;
+    let hashgps = hashids.encode([parseInt(lat_test * 1000000), parseInt(lng_test * 1000000)]);
+    let hashgps_compare = hashids.encode([parseInt(lat_compare * 1000000), parseInt(lng_compare * 1000000)]);
+    console.log("Lat: " + lat_test + " Lng: " + lng_test);
+    console.log("Hash: " + hashgps + " HashCompare: " + hashgps_compare + " Compare: ");
+    let hashgpsdecode = hashids.decode(hashgps);
+    console.log("Hash Decode: " + hashgpsdecode[0] / 1000000 + "  " + hashgpsdecode[1] / 1000000);
+    */
     var ids = hashids.decodeHex(req.query.id);
     console.log(ids);
     res.send({ success: true, _error: null, data: ids });
@@ -72,16 +84,22 @@ module.exports = function(app, passport) {
                 }
                 throw err;
               }
-              var f = new Date();
-              var diff = Math.abs(d - f);
-              let caseId_hash = hashids.encodeHex(ObjectId(newCase._id).toString());
-              res.send({ success: true, _error: null, count: req.body.data.length, timeMS: diff, caseId: caseId_hash, btId: newCase.btId });
+              passport.authenticate("local")(req, res, function() {
+                var f = new Date();
+                var diff = Math.abs(d - f);
+                let caseId_hash = hashids.encodeHex(ObjectId(newCase._id).toString());
+                res.send({ success: true, _error: null, count: req.body.data.length, timeMS: diff, caseId: caseId_hash, btId: newCase.btId });
+              });
             });
           }
         });
       });
     });
   });
+
+  /*Update an existing Case and add new Stores*/
+  app.post("/api/v1/update", jsonParser, function(req, res) {});
+
   //ToDo: Select Cache if build
   //ToDo: GZIP Option for Download
   /*Download all Userdata uploaded with GPS Data and Timestamp*/
@@ -94,7 +112,8 @@ module.exports = function(app, passport) {
     }
     var limit = 5000;
     var d = new Date();
-    var search = { "caseId.status": 1 };
+    var search = {};
+    if (req.query.onlyVerified) search = { "caseId.status": 1 };
     if (req.query.startId) search["_id"] = { $gte: ObjectId(req.query.startId) };
     Store.aggregate(
       [
@@ -113,8 +132,8 @@ module.exports = function(app, passport) {
         {
           $project: {
             _id: 1,
-            lat: { $ifNull: [{ $arrayElemAt: ["$location.coordinates", 1] }, undefined] },
-            lng: { $ifNull: [{ $arrayElemAt: ["$location.coordinates", 0] }, undefined] },
+            lat: { $ifNull: [{ $arrayElemAt: ["$location.coordinates", 1] }, "$lat"] },
+            lng: { $ifNull: [{ $arrayElemAt: ["$location.coordinates", 0] }, "$lng"] },
             speed: 1,
             time: 1,
             btId: 1
@@ -127,7 +146,7 @@ module.exports = function(app, passport) {
         var is_update = result.length < limit;
         var f = new Date();
         var diff = Math.abs(d - f);
-        console.log("[Router] Case Download ID: " + req.query.startId + " Points: " + result.length);
+        console.log("[Router] Case Download ID: " + req.query.startId + " Points: " + result.length + " Verified: " + req.query.onlyVerified);
         res.send({ success: true, _error: null, count: result.length, timeMS: diff, latestId: latest, isNewest: is_update, data: result });
       }
     );
@@ -136,6 +155,7 @@ module.exports = function(app, passport) {
   //ToDo: Change from GPS/TIME Match to Passwort auth
   /*Get Case Data from your case */
   app.get("/api/v1/case", connectEnsureLogin.ensureLoggedIn("/api/v1/login"), function(req, res) {
+    console.log("[Router] Get Case: " + req.user._id);
     var d = new Date();
     var n = d.toLocaleTimeString();
     Case.find({ _id: { $in: req.user._id } }, {}, function(err, result) {
@@ -195,6 +215,7 @@ module.exports = function(app, passport) {
         _error: "Error: ObjectID emty format. Argument passed in must be a single String of 12 bytes or a string of 24 hex characters."
       });
     }
+    console.log("[Router] Edit Case: " + req.user._id + "New Data:");
     var d = new Date();
     var search_cases = {};
     var search_stores = {};
@@ -219,6 +240,7 @@ module.exports = function(app, passport) {
         if (contactInfo.phone) result.contactInfo.phone = contactInfo.phone;
         if (contactInfo.info) result.contactInfo.info = contactInfo.info;
         if (contactInfo.text) result.contactInfo.text = contactInfo.text;
+        console.log(result);
         result.save(search_cases, function(err, result) {
           if (err) throw err;
           var f = new Date();
@@ -286,6 +308,7 @@ module.exports = function(app, passport) {
 
       req.logIn(user, function(err) {
         if (err) return next(err);
+        console.log("[Router] User Login");
         return res.send({ success: true, _error: null, data: "Login Success" });
       });
     })(req, res, next);
@@ -326,7 +349,8 @@ module.exports = function(app, passport) {
     else return res.send({ success: false, _error: "Please input at least Lat and Lng" });
     if (req.query.lng) var lng = req.query.lng;
     else return res.send({ success: false, _error: "Please input at least Lat and Lng" });
-    if (req.query.time) var time = req.query.time;
+    if (req.query.time) var time = { time: new Date(req.query.time) };
+    else var time = {};
 
     console.log("[Router] Waypoint match Request Lat:" + lat + " Lng:" + lng);
 
@@ -343,6 +367,7 @@ module.exports = function(app, passport) {
             spherical: true
           }
         },
+        { $match: time },
         {
           $lookup: {
             from: "cases",
@@ -367,14 +392,15 @@ module.exports = function(app, passport) {
       function(err, result) {
         let matchCount = result.length;
         if (matchCount == 0) return res.send({ success: true, _error: null, data: { isMatch: 0, matchCount: 0 } });
-        if (result[0].privacyLevel === 0) {
-          console.log("is Private");
-          result = {};
-          result["privacyLevel"] = 0;
-          result["isMatch"] = 1;
-          result["matchCount"] = matchCount;
+        for (var k in result) {
+          if (result[k].privacyLevel === 0) {
+            result[k] = {};
+            result[k].privacyLevel = 0;
+            result[k].isMatch = 1;
+          }
         }
-        return res.send({ success: true, _error: null, data: result });
+        console.log("[Router] Waypoint match " + matchCount + " Results");
+        return res.send({ success: true, _error: null, matchCount: matchCount, data: result });
       }
     );
   });
